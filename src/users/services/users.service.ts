@@ -1,41 +1,51 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-
-import { User } from '../entities/user.entity';
-import { CreateUserDto, UpdateUserDto } from '../dtos/user.dto';
+import { Injectable, Inject } from '@nestjs/common';
+import { Db } from 'mongodb';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 
+import { User } from '../entities/user.entity';
+import { CreateUserDto, UpdateUserDto } from '../dtos/user.dto';
+import { ProductsService } from '../../products/services/products.service';
+
 @Injectable()
 export class UsersService {
-  constructor(@InjectModel(User.name) private userModel: Model<User>) {}
+  constructor(
+    private productsService: ProductsService,
+    @Inject('MONGO') private databaseMongo: Db,
+    @InjectModel(User.name) private userModel: Model<User>,
+  ) {}
 
-  async findAll() {
-    return await this.userModel.find().exec();
+  findAll() {
+    return this.userModel.find().exec();
+  }
+
+  getTasks() {
+    const tasksCollection = this.databaseMongo.collection('tasks');
+    return tasksCollection.find().toArray();
   }
 
   async findOne(id: string) {
-    const user = await this.userModel.findById(id).exec();
-    if (!user) {
-      throw new NotFoundException(`User #${id} not found`);
-    }
-    return user;
+    return this.userModel.findById(id);
+  }
+
+  async getOrdersByUser(userId: string) {
+    const user = await this.findOne(userId);
+    return {
+      date: new Date(),
+      user,
+      products: [],
+    };
   }
 
   create(data: CreateUserDto) {
-    const newUser = new this.userModel(data);
-    return newUser.save();
+    const newModel = new this.userModel(data);
+    return newModel.save();
   }
 
   update(id: string, changes: UpdateUserDto) {
-    const user = this.userModel
+    return this.userModel
       .findByIdAndUpdate(id, { $set: changes }, { new: true })
       .exec();
-
-    if (!user) {
-      throw new NotFoundException(`User #${id} not found`);
-    }
-
-    return user;
   }
 
   remove(id: string) {
