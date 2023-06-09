@@ -11,6 +11,11 @@ import {
   HttpCode,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { UseGuards } from '@nestjs/common';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { Public } from 'src/auth/decorators/public.decorator';
+import { Roles } from 'src/auth/decorators/roles.decorator';
+import { Role } from 'src/auth/models/roles.model';
 
 import {
   CreateProductDto,
@@ -19,12 +24,15 @@ import {
 } from '../dtos/products.dto';
 import { ProductsService } from './../services/products.service';
 import { MongoIdPipe } from '../../common/mongo-id.pipe';
+import { RolesGuard } from 'src/auth/guards/roles.guard';
 
+@UseGuards(JwtAuthGuard, RolesGuard)
 @ApiTags('products')
 @Controller('products')
 export class ProductsController {
   constructor(private productsService: ProductsService) {}
 
+  @Public()
   @Get()
   @ApiOperation({ summary: 'List of products' })
   getProducts(@Query() param: FilterProductsDto) {
@@ -36,12 +44,14 @@ export class ProductsController {
     return `yo soy un filter`;
   }
 
+  @Public()
   @Get(':productId')
   @HttpCode(HttpStatus.ACCEPTED)
   getOne(@Param('productId', MongoIdPipe) productId: string) {
     return this.productsService.findOne(productId);
   }
 
+  @Roles(Role.ADMIN)
   @Post()
   create(@Body() payload: CreateProductDto) {
     return this.productsService.create(payload);

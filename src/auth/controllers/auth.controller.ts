@@ -9,8 +9,10 @@ export class AuthController {
 
   @UseGuards(AuthGuard('local'))
   @Post('login')
-  login(@Body() login: LoginDto) {
+  async login(@Body() login: LoginDto) {
     const { email, password } = login;
-    return this.authService.validateUser(email, password);
+    const user = await this.authService.validateUser(email, password);
+    const sesion = this.authService.generateJwt(user);
+    return sesion;
   }
 }
